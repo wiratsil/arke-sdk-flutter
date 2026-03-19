@@ -1,4 +1,27 @@
-## IDE
+## Arke SDK Flutter Plugin
+
+This repository now contains a Flutter plugin for Arke SDK located in `arke-sdk-flutter/arke_sdk_flutter`.
+
+### How to install via Git
+
+Add this to your `pubspec.yaml`:
+
+```yaml
+dependencies:
+  arke_sdk_flutter:
+    git:
+      url: https://github.com/wimutti27698/arke-sdk-flutter.git
+      path: arke-sdk-flutter/arke_sdk_flutter
+```
+
+### Features Supported:
+- **Beeper**: Sound control
+- **Printer**: Thermal printing (Text & Alignment)
+- **Terminal Info**: Device Model, Serial Number, OS version
+
+---
+
+## SDK Original Info (IDE/OS/USDK)
 
 - Install the latest version of [Android Studio](https://developer.android.google.cn/studio/index.html),  the android SDK API level is 25.
 
