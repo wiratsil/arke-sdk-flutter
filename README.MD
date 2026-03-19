@@ -10,7 +10,7 @@ Add this to your `pubspec.yaml`:
 dependencies:
   arke_sdk_flutter:
     git:
-      url: https://github.com/wimutti27698/arke-sdk-flutter.git
+      url: https://github.com/wiratsil/arke-sdk-flutter.git
       path: arke-sdk-flutter/arke_sdk_flutter
 ```
 
