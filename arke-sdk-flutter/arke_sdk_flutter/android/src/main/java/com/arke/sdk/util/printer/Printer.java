@@ -3,7 +3,6 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.RemoteException;
 import com.arke.sdk.ArkeSdkDemoApplication;
-import com.arke.sdk.R;
 import com.usdk.apiservice.aidl.printer.OnPrintListener;
 import com.usdk.apiservice.aidl.printer.PrinterError;
 import com.usdk.apiservice.aidl.printer.UPrinter;

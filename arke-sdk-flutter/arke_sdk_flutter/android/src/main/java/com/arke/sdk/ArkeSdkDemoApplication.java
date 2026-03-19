@@ -24,11 +24,15 @@ public class ArkeSdkDemoApplication {
         context = ctx.getApplicationContext();
         bindSdkDeviceService();
         // Printer setup if needed
-        Printer.initWebView(context);
+        // Printer.initWebView(context); // Commented out to prevent BadTokenException (SYSTEM_ALERT_WINDOW) on Android 10+
     }
 
     public static Context getContext() {
         return context;
+    }
+
+    public static boolean isSdkConnected() {
+        return deviceService != null;
     }
 
     public static DeviceService getDeviceService() {

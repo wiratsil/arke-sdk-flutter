@@ -11,10 +11,7 @@ import io.flutter.plugin.common.MethodChannel.Result;
 
 /** ArkeSdkFlutterPlugin */
 public class ArkeSdkFlutterPlugin implements FlutterPlugin, MethodCallHandler {
-  /// The MethodChannel that will the communication between Flutter and native Android
-  ///
-  /// This local reference serves to register the plugin with the Flutter Engine and unregister it
-  /// when the Flutter Engine is detached from the Activity
+  private MethodChannel channel;
   private Context context;
 
   @Override
@@ -32,6 +29,10 @@ public class ArkeSdkFlutterPlugin implements FlutterPlugin, MethodCallHandler {
     } else if (call.method.equals("beep")) {
       int milliseconds = call.argument("milliseconds") != null ? (int) call.argument("milliseconds") : 500;
       try {
+        if (!com.arke.sdk.ArkeSdkDemoApplication.isSdkConnected()) {
+            result.error("SDK_NOT_CONNECTED", "Arke SDK Service is not bound yet or not installed.", null);
+            return;
+        }
         com.arke.sdk.api.Beeper.getInstance().startBeep(milliseconds);
         result.success(null);
       } catch (Exception e) {
@@ -41,6 +42,10 @@ public class ArkeSdkFlutterPlugin implements FlutterPlugin, MethodCallHandler {
       String text = call.argument("text");
       int align = call.argument("align") != null ? (int) call.argument("align") : 0;
       try {
+        if (!com.arke.sdk.ArkeSdkDemoApplication.isSdkConnected()) {
+            result.error("SDK_NOT_CONNECTED", "Arke SDK Service is not bound yet or not installed.", null);
+            return;
+        }
         com.arke.sdk.util.printer.Printer printer = com.arke.sdk.util.printer.Printer.getInstance();
         printer.getStatus();
         printer.addText(align, text);
@@ -61,6 +66,10 @@ public class ArkeSdkFlutterPlugin implements FlutterPlugin, MethodCallHandler {
       }
     } else if (call.method.equals("getTerminalInfo")) {
       try {
+        if (!com.arke.sdk.ArkeSdkDemoApplication.isSdkConnected()) {
+            result.error("SDK_NOT_CONNECTED", "Arke SDK Service is not bound yet or not installed.", null);
+            return;
+        }
         com.arke.sdk.api.DeviceManager deviceManager = com.arke.sdk.api.DeviceManager.getInstance();
         java.util.Map<String, String> info = new java.util.HashMap<>();
         info.put("model", deviceManager.getModel());
