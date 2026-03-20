@@ -19,6 +19,12 @@ class MockArkeSdkFlutterPlatform
 
   @override
   Future<Map<String, String>?> getTerminalInfo() => Future.value({'model': 'Mock Device'});
+
+  @override
+  Future<String?> startScanner() => Future.value('mock_scan_code');
+
+  @override
+  Future<String?> startNfcScan() => Future.value('mock_nfc_uid');
 }
 
 void main() {

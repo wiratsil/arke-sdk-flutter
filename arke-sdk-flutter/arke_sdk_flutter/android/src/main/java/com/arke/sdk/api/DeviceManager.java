@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.os.RemoteException;
 
 import com.arke.sdk.ArkeSdkDemoApplication;
+
 import com.usdk.apiservice.aidl.device.UDeviceManager;
 
 import java.util.List;
@@ -199,7 +200,7 @@ public class DeviceManager {
      */
     public void updateSystemTime(String time) throws RemoteException {
         if (!deviceManager.updateSystemDatetime(time)) {
-            throw new RemoteException("Update Date Time Error");
+            throw new RemoteException("Failed to update system date time");
         }
     }
 

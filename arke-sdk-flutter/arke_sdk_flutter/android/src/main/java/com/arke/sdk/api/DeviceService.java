@@ -224,7 +224,7 @@ public class DeviceService {
     /**
      * Get RF card reader.
      */
-    URFReader getRFReader() {
+    public URFReader getRFReader() {
         try {
             Bundle param = new Bundle();
 
@@ -357,7 +357,7 @@ public class DeviceService {
     /**
      * Get back scanner device.
      */
-    UScanner getBackScanner() {
+    public UScanner getBackScanner() {
         try {
             return UScanner.Stub.asInterface(deviceService.getScanner(CameraId.BACK));
         } catch (RemoteException e) {

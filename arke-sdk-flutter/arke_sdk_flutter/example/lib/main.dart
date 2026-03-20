@@ -94,6 +94,26 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
+  Future<void> _startScanner() async {
+    setState(() => _statusMessage = 'Starting Scanner...');
+    try {
+      final code = await _arkeSdkFlutterPlugin.startScanner();
+      setState(() => _statusMessage = 'Scan Result: $code');
+    } catch (e) {
+      setState(() => _statusMessage = 'Scan Error: $e');
+    }
+  }
+
+  Future<void> _startNfcScan() async {
+    setState(() => _statusMessage = 'Please tap card...');
+    try {
+      final uid = await _arkeSdkFlutterPlugin.startNfcScan();
+      setState(() => _statusMessage = 'Card UID: $uid');
+    } catch (e) {
+      setState(() => _statusMessage = 'NFC Error: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -125,6 +145,10 @@ class _MyAppState extends State<MyApp> {
               _buildBeeperControls(),
               const SizedBox(height: 16),
               _buildPrinterControls(),
+              const SizedBox(height: 16),
+              _buildScannerControls(),
+              const SizedBox(height: 16),
+              _buildNfcControls(),
               const SizedBox(height: 24),
               Text(
                 'Status: $_statusMessage',
@@ -275,6 +299,48 @@ class _MyAppState extends State<MyApp> {
         ),
         Text(label),
       ],
+    );
+  }
+
+  Widget _buildScannerControls() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Scanner Test', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Divider(),
+            ElevatedButton.icon(
+              onPressed: _isConnected ? _startScanner : null,
+              icon: const Icon(Icons.qr_code_scanner),
+              label: const Text('Scan Barcode/QR'),
+              style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(40)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNfcControls() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('NFC / Card Tap Test', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Divider(),
+            ElevatedButton.icon(
+              onPressed: _isConnected ? _startNfcScan : null,
+              icon: const Icon(Icons.tap_and_play),
+              label: const Text('Read NFC Card'),
+              style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(40)),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
