@@ -346,7 +346,7 @@ public class DeviceService {
     /**
      * Get front scanner device.
      */
-    UScanner getFrontScanner() {
+    public UScanner getFrontScanner() {
         try {
             return UScanner.Stub.asInterface(deviceService.getScanner(CameraId.FRONT));
         } catch (RemoteException e) {

@@ -17,12 +17,20 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   String _platformVersion = 'Unknown';
-  final _arkeSdkFlutterPlugin = ArkeSdkFlutter();
+  final _arke = ArkeSdkFlutter();
   Map<String, String> _terminalInfo = {};
   bool _isConnected = false;
   int _beepDuration = 1000;
-  int _selectedAlign = 1; // 0=Left, 1=Center, 2=Right
+  int _selectedAlign = 1;
   String _statusMessage = 'Initializing...';
+
+  // LED state
+  final Map<String, bool> _ledStates = {
+    'red': false,
+    'green': false,
+    'yellow': false,
+    'blue': false,
+  };
 
   @override
   void initState() {
@@ -33,7 +41,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> initPlatformState() async {
     String platformVersion;
     try {
-      platformVersion = await _arkeSdkFlutterPlugin.getPlatformVersion() ?? 'Unknown platform version';
+      platformVersion = await _arke.getPlatformVersion() ?? 'Unknown';
       _isConnected = true;
       _statusMessage = 'SDK Connected';
     } on PlatformException {
@@ -43,31 +51,15 @@ class _MyAppState extends State<MyApp> {
     }
 
     if (!mounted) return;
+    setState(() => _platformVersion = platformVersion);
 
-    setState(() {
-      _platformVersion = platformVersion;
-    });
-    
-    // Auto fetch info if connected
-    if (_isConnected) {
-      _getTerminalInfo();
-    }
-  }
-
-  Future<void> _beep() async {
-    setState(() => _statusMessage = 'Beeping for ${_beepDuration}ms...');
-    try {
-      await _arkeSdkFlutterPlugin.beep(milliseconds: _beepDuration);
-      setState(() => _statusMessage = 'Beep Success');
-    } catch (e) {
-      setState(() => _statusMessage = 'Beep Error: $e');
-    }
+    if (_isConnected) _getTerminalInfo();
   }
 
   Future<void> _getTerminalInfo() async {
     setState(() => _statusMessage = 'Fetching Terminal Info...');
     try {
-      final info = await _arkeSdkFlutterPlugin.getTerminalInfo();
+      final info = await _arke.getTerminalInfo();
       if (info != null) {
         setState(() {
           _terminalInfo = info;
@@ -79,46 +71,159 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-  Future<void> _printTest() async {
-    setState(() => _statusMessage = 'Printing...');
+  // ==================== Beeper ====================
+
+  Future<void> _beep() async {
+    setState(() => _statusMessage = 'Beeping for ${_beepDuration}ms...');
     try {
-      await _arkeSdkFlutterPlugin.printText("--- ARKE SDK TEST ---", align: _selectedAlign);
-      await _arkeSdkFlutterPlugin.printText("Model: ${_terminalInfo['model'] ?? 'N/A'}", align: 0);
-      await _arkeSdkFlutterPlugin.printText("Serial: ${_terminalInfo['serialNo'] ?? 'N/A'}", align: 0);
-      await _arkeSdkFlutterPlugin.printText("OS: $_platformVersion", align: 0);
-      await _arkeSdkFlutterPlugin.printText("\nFlutter Plugin Test Succeed!\n", align: 1);
-      await _arkeSdkFlutterPlugin.printText("----------------------", align: 1);
-      setState(() => _statusMessage = 'Print Success');
+      await _arke.beep(milliseconds: _beepDuration);
+      setState(() => _statusMessage = 'Beep Success');
+    } catch (e) {
+      setState(() => _statusMessage = 'Beep Error: $e');
+    }
+  }
+
+  // ==================== Printer ====================
+
+  Future<void> _printTestReceipt() async {
+    setState(() => _statusMessage = 'Printing Receipt...');
+    try {
+      await _arke.printText("--- ARKE SDK TEST ---", align: 1);
+      await _arke.printText("Model: ${_terminalInfo['model'] ?? 'N/A'}", align: 0);
+      await _arke.printText("Serial: ${_terminalInfo['serialNo'] ?? 'N/A'}", align: 0);
+      await _arke.printText("OS: $_platformVersion", align: 0);
+      await _arke.printText("\nFlutter Plugin Test!\n", align: 1);
+      await _arke.printText("---------------------", align: 1);
+      setState(() => _statusMessage = 'Print Receipt Success');
     } catch (e) {
       setState(() => _statusMessage = 'Print Error: $e');
     }
   }
 
-  Future<void> _startScanner() async {
-    setState(() => _statusMessage = 'Starting Scanner...');
+  Future<void> _printBarcode() async {
+    setState(() => _statusMessage = 'Printing Barcode...');
     try {
-      final code = await _arkeSdkFlutterPlugin.startScanner();
+      await _arke.printBarcode('1234567890', align: 1, codeWidth: 2, codeHeight: -1);
+      setState(() => _statusMessage = 'Barcode Print Success');
+    } catch (e) {
+      setState(() => _statusMessage = 'Barcode Error: $e');
+    }
+  }
+
+  Future<void> _printQrCode() async {
+    setState(() => _statusMessage = 'Printing QR Code...');
+    try {
+      await _arke.printQrCode('https://flutter.dev', align: 1, imageHeight: 200, ecLevel: 3);
+      setState(() => _statusMessage = 'QR Code Print Success');
+    } catch (e) {
+      setState(() => _statusMessage = 'QR Code Error: $e');
+    }
+  }
+
+  Future<void> _getPrinterStatus() async {
+    setState(() => _statusMessage = 'Checking Printer...');
+    try {
+      final status = await _arke.getPrinterStatus();
+      setState(() => _statusMessage = 'Printer Status: $status');
+    } catch (e) {
+      setState(() => _statusMessage = 'Printer Status Error: $e');
+    }
+  }
+
+  // ==================== LED ====================
+
+  Future<void> _toggleLed(String color) async {
+    try {
+      if (_ledStates[color] == true) {
+        await _arke.ledTurnOff([color]);
+        setState(() {
+          _ledStates[color] = false;
+          _statusMessage = '${color.toUpperCase()} LED OFF';
+        });
+      } else {
+        await _arke.ledTurnOn([color]);
+        setState(() {
+          _ledStates[color] = true;
+          _statusMessage = '${color.toUpperCase()} LED ON';
+        });
+      }
+    } catch (e) {
+      setState(() => _statusMessage = 'LED Error: $e');
+    }
+  }
+
+  Future<void> _ledAllOn() async {
+    try {
+      await _arke.ledTurnOnAll();
+      setState(() {
+        _ledStates.updateAll((key, value) => true);
+        _statusMessage = 'All LEDs ON';
+      });
+    } catch (e) {
+      setState(() => _statusMessage = 'LED Error: $e');
+    }
+  }
+
+  Future<void> _ledAllOff() async {
+    try {
+      await _arke.ledTurnOffAll();
+      setState(() {
+        _ledStates.updateAll((key, value) => false);
+        _statusMessage = 'All LEDs OFF';
+      });
+    } catch (e) {
+      setState(() => _statusMessage = 'LED Error: $e');
+    }
+  }
+
+  // ==================== Scanner ====================
+
+  Future<void> _startScanner({bool front = false}) async {
+    setState(() => _statusMessage = front ? 'Starting Front Scanner...' : 'Starting Back Scanner...');
+    try {
+      final code = front ? await _arke.startFrontScanner() : await _arke.startScanner();
       setState(() => _statusMessage = 'Scan Result: $code');
     } catch (e) {
       setState(() => _statusMessage = 'Scan Error: $e');
     }
   }
 
+  // ==================== NFC ====================
+
   Future<void> _startNfcScan() async {
     setState(() => _statusMessage = 'Please tap card...');
     try {
-      final uid = await _arkeSdkFlutterPlugin.startNfcScan();
+      final uid = await _arke.startNfcScan();
       setState(() => _statusMessage = 'Card UID: $uid');
     } catch (e) {
       setState(() => _statusMessage = 'NFC Error: $e');
     }
   }
 
+  // ==================== Mag Card Reader ====================
+
+  Future<void> _startMagReader() async {
+    setState(() => _statusMessage = 'Swipe card now...');
+    try {
+      final data = await _arke.startMagReader(timeout: 30);
+      if (data != null && data.isNotEmpty) {
+        final parts = data.entries.map((e) => '${e.key}: ${e.value}').join('\n');
+        setState(() => _statusMessage = 'Mag Card:\n$parts');
+      } else {
+        setState(() => _statusMessage = 'No card data');
+      }
+    } catch (e) {
+      setState(() => _statusMessage = 'Mag Reader Error: $e');
+    }
+  }
+
+  // ==================== Build UI ====================
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       theme: ThemeData(
-        useMaterial3: true, 
+        useMaterial3: true,
         colorSchemeSeed: Colors.indigo,
         brightness: Brightness.light,
       ),
@@ -139,22 +244,22 @@ class _MyAppState extends State<MyApp> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _buildStatusCard(),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               _buildInfoCard(),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               _buildBeeperControls(),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               _buildPrinterControls(),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
+              _buildLedControls(),
+              const SizedBox(height: 12),
               _buildScannerControls(),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               _buildNfcControls(),
-              const SizedBox(height: 24),
-              Text(
-                'Status: $_statusMessage',
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.indigo),
-                textAlign: TextAlign.center,
-              ),
+              const SizedBox(height: 12),
+              _buildMagReaderControls(),
+              const SizedBox(height: 16),
+              _buildStatusBar(),
             ],
           ),
         ),
@@ -186,11 +291,8 @@ class _MyAppState extends State<MyApp> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Terminal Information', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                IconButton(
-                  onPressed: _getTerminalInfo,
-                  icon: const Icon(Icons.download, size: 20),
-                ),
+                const Text('Terminal Info', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                IconButton(onPressed: _getTerminalInfo, icon: const Icon(Icons.download, size: 20)),
               ],
             ),
             const Divider(),
@@ -206,7 +308,7 @@ class _MyAppState extends State<MyApp> {
 
   Widget _infoRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      padding: const EdgeInsets.symmetric(vertical: 3.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -224,7 +326,7 @@ class _MyAppState extends State<MyApp> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Beeper Test', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text('🔊 Beeper', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const Divider(),
             Row(
               children: [
@@ -232,9 +334,7 @@ class _MyAppState extends State<MyApp> {
                 Expanded(
                   child: Slider(
                     value: _beepDuration.toDouble(),
-                    min: 100,
-                    max: 3000,
-                    divisions: 29,
+                    min: 100, max: 3000, divisions: 29,
                     label: '${_beepDuration}ms',
                     onChanged: (val) => setState(() => _beepDuration = val.round()),
                   ),
@@ -261,9 +361,8 @@ class _MyAppState extends State<MyApp> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Printer Test', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text('🖨️ Printer', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const Divider(),
-            const Text('Alignment:', style: TextStyle(fontSize: 14)),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
@@ -274,13 +373,37 @@ class _MyAppState extends State<MyApp> {
             ),
             const SizedBox(height: 8),
             ElevatedButton.icon(
-              onPressed: _isConnected ? _printTest : null,
-              icon: const Icon(Icons.print),
-              label: const Text('Print Test Receipt'),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(40),
-                backgroundColor: Colors.indigo.shade100,
-              ),
+              onPressed: _isConnected ? _printTestReceipt : null,
+              icon: const Icon(Icons.receipt_long),
+              label: const Text('Print Receipt'),
+              style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(40)),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _isConnected ? _printBarcode : null,
+                    icon: const Icon(Icons.barcode_reader, size: 18),
+                    label: const Text('Barcode'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _isConnected ? _printQrCode : null,
+                    icon: const Icon(Icons.qr_code, size: 18),
+                    label: const Text('QR Code'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: _isConnected ? _getPrinterStatus : null,
+              icon: const Icon(Icons.info_outline, size: 18),
+              label: const Text('Check Printer Status'),
+              style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(36)),
             ),
           ],
         ),
@@ -302,6 +425,70 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
+  Widget _buildLedControls() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('💡 LED', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Divider(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _ledButton('red', Colors.red),
+                _ledButton('green', Colors.green),
+                _ledButton('yellow', Colors.amber),
+                _ledButton('blue', Colors.blue),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _isConnected ? _ledAllOn : null,
+                    child: const Text('All ON'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _isConnected ? _ledAllOff : null,
+                    child: const Text('All OFF'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _ledButton(String color, Color displayColor) {
+    final isOn = _ledStates[color] == true;
+    return GestureDetector(
+      onTap: _isConnected ? () => _toggleLed(color) : null,
+      child: Column(
+        children: [
+          Container(
+            width: 40, height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isOn ? displayColor : displayColor.withOpacity(0.2),
+              border: Border.all(color: displayColor, width: 2),
+              boxShadow: isOn ? [BoxShadow(color: displayColor.withOpacity(0.5), blurRadius: 10)] : [],
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(color.toUpperCase(), style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: displayColor)),
+        ],
+      ),
+    );
+  }
+
   Widget _buildScannerControls() {
     return Card(
       child: Padding(
@@ -309,13 +496,26 @@ class _MyAppState extends State<MyApp> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Scanner Test', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text('📷 Scanner', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const Divider(),
-            ElevatedButton.icon(
-              onPressed: _isConnected ? _startScanner : null,
-              icon: const Icon(Icons.qr_code_scanner),
-              label: const Text('Scan Barcode/QR'),
-              style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(40)),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _isConnected ? () => _startScanner(front: false) : null,
+                    icon: const Icon(Icons.qr_code_scanner, size: 18),
+                    label: const Text('Back Camera'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _isConnected ? () => _startScanner(front: true) : null,
+                    icon: const Icon(Icons.camera_front, size: 18),
+                    label: const Text('Front Camera'),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -330,7 +530,7 @@ class _MyAppState extends State<MyApp> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('NFC / Card Tap Test', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text('📱 NFC / Card Tap', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const Divider(),
             ElevatedButton.icon(
               onPressed: _isConnected ? _startNfcScan : null,
@@ -340,6 +540,43 @@ class _MyAppState extends State<MyApp> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildMagReaderControls() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('💳 Magnetic Card Reader', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Divider(),
+            ElevatedButton.icon(
+              onPressed: _isConnected ? _startMagReader : null,
+              icon: const Icon(Icons.credit_card),
+              label: const Text('Swipe Mag Card'),
+              style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(40)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusBar() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.indigo.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.indigo.shade200),
+      ),
+      child: Text(
+        _statusMessage,
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.indigo.shade700),
+        textAlign: TextAlign.center,
       ),
     );
   }
